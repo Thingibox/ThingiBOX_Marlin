@@ -2,20 +2,26 @@
 #
 # mfrb
 #
-# Do "git rebase -i" against the "target" branch (RCBugFix or dev)
+# Do "git rebase -i" against the repo's "target" branch
 #
 
-MFINFO=$(mfinfo) || exit
+MFINFO=$(mfinfo "$@") || exit 1
 IFS=' ' read -a INFO <<< "$MFINFO"
+TARG=${INFO[3]}
+CURR=${INFO[5]}
 
-if [[ ${INFO[4]} == "(no" ]]; then
-  echo "Branch is unavailable!"
-  exit 1
-fi
+IND=6
+while [ $IND -lt ${#INFO[@]} ]; do
+  ARG=${INFO[$IND]}
+  case "$ARG" in
+    -q|--quick ) QUICK=1 ;;
+     -h|--help ) USAGE=1 ;;
+             * ) USAGE=1 ; echo "unknown option: $ARG" ;;
+  esac
+  let IND+=1
+done
 
-case "$#" in
-  0 ) ;;
-  * ) echo "Usage: `basename $0`" 1>&2 ; exit 1 ;;
-esac
+[[ $USAGE == 1 ]] && { echo "usage: `basename $0` [1|2]" 1>&2 ; exit 1 ; }
 
-git rebase -i ${INFO[3]}
+[[ $QUICK ]] || git fetch upstream
+git rebase upstream/$TARG && git rebase -i upstream/$TARG
